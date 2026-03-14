@@ -6,7 +6,7 @@ Linker command line:
   --edf=C:\Program Files\Microchip\xc8\v3.10\pic\dat\20250813170317_en.msgs \
   -cs -h+dist/default/debug\Temp_Sensor.X.debug.sym \
   --cmf=dist/default/debug\Temp_Sensor.X.debug.cmf -z -Q18F47K42 \
-  -oC:\Users\gutie\AppData\Local\Temp\xcAsksw.0\driver_tmp_3.o \
+  -oC:\Users\gutie\AppData\Local\Temp\xcAsmhg.0\driver_tmp_3.o \
   --fixupoverflow=error -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
   -Mdist/default/debug/Temp_Sensor.X.debug.map -E1 -ACODE=00h-01FFFFh \
   -ACONST=00h-01FFFFh -ASMALLCONST=02000h-020FFhx224,012000h-0120FFhx224 \

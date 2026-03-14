@@ -14,7 +14,7 @@
 //	    temperature sensor
 // Versions:
 //  	V1.0: 3/10/2026
-//  	V1.1: TBD
+//  	V1.1: 3/14/2026
 //-----------------------------
 
 ;---------------------
@@ -30,8 +30,8 @@
 ;It is more flexible and can be used to define complex expressions or sequences of instructions.
 ;It is processed by the preprocessor before the assembly begins.
 
-#define  measuredTempInput 	-5 ; this is the input value
-#define  refTempInput		15 ; this is the input value
+#define  measuredTempInput 	30 ; this is the input value
+#define  refTempInput		10 ; this is the input value
 
 ;---------------------
 ; Definitions
@@ -71,7 +71,7 @@ REG22   equ     0x22
 	movwf	REG20
 	cpfsgt	REG20	    ; check if f<10, set to 10 if lower than
 	movwf	REG20
-	movlw	45
+	movlw	50
 	cpfslt	REG20	    ; check if f>5, set to 45 if greater than
 	movwf	REG20	    ; move temp to hex and dec registers	    ; ^
 	movff	REG20, 0x60

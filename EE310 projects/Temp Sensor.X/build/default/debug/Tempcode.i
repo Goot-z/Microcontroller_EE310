@@ -32354,7 +32354,7 @@ REG22 equ 0x22
 
  org 0x20
  clrf TRISD ; set portd as output
- movlw 15 ; this is the input value ; move measured to W
+ movlw 10 ; this is the input value ; move measured to W
  movwf REG20
 ; test reference against specified min and max. If below/above min/max,
 ; for to allowed min/max.
@@ -32363,7 +32363,7 @@ REG22 equ 0x22
  movwf REG20
  cpfsgt REG20 ; check if f<10, set to 10 if lower than
  movwf REG20
- movlw 45
+ movlw 50
  cpfslt REG20 ; check if f>5, set to 45 if greater than
  movwf REG20 ; move temp to hex and dec registers ; ^
  movff REG20, 0x60
@@ -32379,7 +32379,7 @@ Br: incf 0x61, F, B ; inc by 1, this will end up as the remainder
  bc Br ; branch name "branch reference"
 
 ; now test measured temperature
- movlw -5 ; this is the input value
+ movlw 30 ; this is the input value
  movwf REG21
  movlw 10
  btfsc REG21, 7 ; check if MSB is set
@@ -32399,7 +32399,7 @@ Bm: incf 0x71, F ; inc by 1, remainder
 ;Now that numbers have been tested, compare temps to enable system
 sys: btfsc REG21, 7 ; if actual <0, we know it's below ref
  goto cold ; go to heating system
- movlw -5 ; this is the input value ; move actual to W
+ movlw 30 ; this is the input value ; move actual to W
  cpfseq REG20 ; ref = actual
  goto continue ; continue other checks if not equal
  goto equal
