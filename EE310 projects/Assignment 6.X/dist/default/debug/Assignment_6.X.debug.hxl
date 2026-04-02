@@ -1,0 +1,49 @@
+### HEXMate logfile and output summary ###
+
+### Command-line arguments ###
+ C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o
+ -Odist/default/debug\Assignment_6.X.debug.hex
+ -logfile=dist/default/debug\Assignment_6.X.debug.hxl
+ -addressing=1
+ -break=300000
+
+### Memory Usage ###
+ Input file ranges:
+  0h - 3h		(C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+  20h - 43h		(C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+  100h - 18Dh		(C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+  2000h - 200Fh		(C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+  300000h - 300009h		(C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+ Unused ranges:
+  4h - 1Fh
+  44h - FFh
+  18Eh - 1FFFh
+  2010h - 2FFFFFh
+
+### Hex Memory Map ###
+ Legend:
+  -- = Unused memory
+  H1 = Input file             (C:\Users\gutie\AppData\Local\Temp\xcAshho.0\driver_tmp_3.o)
+----------------------------------------------------------
+         | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+----------------------------------------------------------
+00000000 | H1 H1 H1 H1 -- -- -- -- -- -- -- -- -- -- -- --
+----------------------------------------------------------
+00000020 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000030 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000040 | H1 H1 H1 H1 -- -- -- -- -- -- -- -- -- -- -- --
+----------------------------------------------------------
+00000100 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000110 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000120 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000130 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000140 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000150 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000160 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000170 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+00000180 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 -- --
+----------------------------------------------------------
+00002000 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
+----------------------------------------------------------
+00300000 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 -- -- -- -- -- --
+00300010 | --
