@@ -7,7 +7,7 @@
 # 1 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/language_support.h" 1 3
 # 2 "<built-in>" 2
 # 1 "Photoresistor_lockbox.c" 2
-# 29 "Photoresistor_lockbox.c"
+# 30 "Photoresistor_lockbox.c"
 # 1 "C:\\Users\\gutie\\Documents\\MPLAB resources\\C_PIC18F47K42.h" 1
 # 16 "C:\\Users\\gutie\\Documents\\MPLAB resources\\C_PIC18F47K42.h"
 #pragma config FEXTOSC = LP
@@ -27167,12 +27167,12 @@ unsigned char __t1rd16on(void);
 unsigned char __t3rd16on(void);
 # 34 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.h" 2 3
 # 66 "C:\\Users\\gutie\\Documents\\MPLAB resources\\C_PIC18F47K42.h" 2
-# 30 "Photoresistor_lockbox.c" 2
+# 31 "Photoresistor_lockbox.c" 2
 # 1 "./Initialize.h" 1
 # 25 "./Initialize.h"
 # 1 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include\\c99/stdbool.h" 1 3
 # 26 "./Initialize.h" 2
-# 128 "./Initialize.h"
+# 129 "./Initialize.h"
 typedef enum
 {
     waitFor_PR1 = 0,
@@ -27182,7 +27182,7 @@ typedef enum
     Wrong_Secret_Code,
     Emergency_Pressed
 } system_state_t;
-# 147 "./Initialize.h"
+# 148 "./Initialize.h"
 extern volatile uint8_t Check_Emergency_SW;
 
 extern uint8_t PR1_Count;
@@ -27198,7 +27198,7 @@ extern _Bool PR1Prev;
 extern _Bool PR2Prev;
 
 extern system_state_t SystemState;
-# 31 "Photoresistor_lockbox.c" 2
+# 32 "Photoresistor_lockbox.c" 2
 # 1 "./C_functions.h" 1
 # 26 "./C_functions.h"
 void SYSTEM_Initialize(void);
@@ -27241,7 +27241,7 @@ void EmergencyOn(void);
 
 
 void DelayMs_Blocking(uint16_t ms);
-# 32 "Photoresistor_lockbox.c" 2
+# 33 "Photoresistor_lockbox.c" 2
 
 
 
@@ -27249,25 +27249,25 @@ void DelayMs_Blocking(uint16_t ms);
 
 volatile uint8_t Check_Emergency_SW = 0;
 
+
 uint8_t PR1_Count = 0;
 uint8_t PR2_Count = 0;
+
 
 uint16_t PR1_DONE = 0;
 uint16_t PR2_DONE = 0;
 
+
 uint8_t PR1_Debounce = 0;
 uint8_t PR2_Debounce = 0;
+
 
 _Bool PR1Prev = 0;
 _Bool PR2Prev = 0;
 
+
 system_state_t SystemState = waitFor_PR1;
-
-
-
-
-
-
+# 66 "Photoresistor_lockbox.c"
 static const uint8_t Seg7_Digits[10] =
 {
     0b00111111,
@@ -27287,8 +27287,10 @@ static const uint8_t Seg7_Digits[10] =
 
 
 
+
 void __attribute__((picinterrupt(("irq(7), base(8)")))) ISR_IOC(void)
 {
+
     if (PIR0bits.IOCIF && IOCBFbits.IOCBF0)
     {
         IOCBFbits.IOCBF0 = 0;
@@ -27300,6 +27302,7 @@ void __attribute__((picinterrupt(("irq(7), base(8)")))) ISR_IOC(void)
 
     }
 }
+
 
 
 
@@ -27421,9 +27424,9 @@ void Seg7_Display(uint8_t digit)
 
 void SEG_Clear(void)
 {
-
     LATD = 0x00;
 }
+
 
 
 
