@@ -8,7 +8,7 @@
 //    
 //   
 // Inputs: VPR1 (RB1), VPR2 (RB2), Eswitch (RB0)
-// Outputs: RD0-RD6 (seven segment), RD7 (5V relay), RB3 (power LED)
+// Outputs: RD0-RD6 (seven segment), RB5 (5V relay), RB3 (power LED)
 // Setup: The Curiosity Board
 //    
 // Date: 4/13/2025
@@ -20,6 +20,7 @@
 // Author: Steve Gutierrez
 // Versions:
 //       V1.0: Original
+//       V1.1: Updates to IO port selection, some code functions
 // Useful links: 
 //       Datasheet: https://ww1.microchip.com/downloads/en/DeviceDoc/PIC18(L)F26-27-45-46-47-55-56-57K42-Data-Sheet-40001919G.pdf 
 //       PIC18F Instruction Sets: https://onlinelibrary.wiley.com/doi/pdf/10.1002/9781119448457.app4 
@@ -36,26 +37,33 @@
 
 volatile uint8_t Check_Emergency_SW = 0; // this flag is raised by the ISR so the main loop knows an emergency happened
 
-uint8_t PR1_Count = 0;                   // keeps track of how many valid times PR1 was activated
-uint8_t PR2_Count = 0;                   // keeps track of how many valid times PR2 was activated
+// count # times PR activated
+uint8_t PR1_Count = 0;                   
+uint8_t PR2_Count = 0;                  
 
-uint16_t PR1_DONE = 0;                   // counts how long PR1 has been idle after the first trigger
-uint16_t PR2_DONE = 0;                   // counts how long PR2 has been idle after the first trigger
+// count PR idle time after press
+uint16_t PR1_DONE = 0;                   
+uint16_t PR2_DONE = 0;                  
 
-uint8_t PR1_Debounce = 0;                // helps ignore repeated PR1 readings caused by unstable transitions
-uint8_t PR2_Debounce = 0;                // helps ignore repeated PR2 readings caused by unstable transitions
+// PR debouncer
+uint8_t PR1_Debounce = 0;                
+uint8_t PR2_Debounce = 0;                
 
-bool PR1Prev = false;                    // stores the previous PR1 state so the code can detect a new edge
-bool PR2Prev = false;                    // stores the previous PR2 state so the code can detect a new edge
+// store previous PR state to check for new press
+bool PR1Prev = false;                  
+bool PR2Prev = false;                    
 
-system_state_t SystemState = waitFor_PR1; // when the system starts, it always expects the first input from PR1
+// when the system starts, it always expects the first input from PR1
+system_state_t SystemState = waitFor_PR1; 
 
-/* =========================
+
+/*
    7-SEGMENT LOOKUP TABLE
    bit0=A, bit1=B, ... bit6=G
-   ========================= */
+*/
 
-static const uint8_t Seg7_Digits[10] = // set binary codes for 0-1 on seven segment
+// set binary codes for 0-9 on seven segment as matrix
+static const uint8_t Seg7_Digits[10] = 
 {
     0b00111111, /* 0 */ 
     0b00000110, /* 1 */   
@@ -69,14 +77,16 @@ static const uint8_t Seg7_Digits[10] = // set binary codes for 0-1 on seven segm
     0b01100111  /* 9 */  
 };
 
-/* =========================
+/*
    INTERRUPT SERVICE ROUTINE
    Emergency switch on RB0
-   ========================= */
+*/
 
-void __interrupt(irq(IRQ_IOC), base(8)) ISR_IOC(void) // this ISR runs immediately when RB0 changes and triggers the emergency input
-{
-    if (PIR0bits.IOCIF && IOCBFbits.IOCBF0) // makes sure the interrupt really came from the RB0 interrupt-on-change source
+// ISR runs immediately when RB0 changes and triggers the emergency input
+void __interrupt(irq(IRQ_IOC), base(8)) ISR_IOC(void) 
+{  
+    // did interrupt really come from the RB0 interrupt-on-change source
+    if (PIR0bits.IOCIF && IOCBFbits.IOCBF0) 
     {
         IOCBFbits.IOCBF0 = 0;               // clears the RB0-specific interrupt flag so the same interrupt can be detected again later
         PIR0bits.IOCIF = 0;                 // clears the global IOC interrupt flag to complete interrupt servicing
@@ -88,15 +98,16 @@ void __interrupt(irq(IRQ_IOC), base(8)) ISR_IOC(void) // this ISR runs immediate
     }
 }
 
-/* =========================
+/* 
    MAIN
-   ========================= */
+*/
 
-void main(void)                             // program starts here after reset
+// program starts here
+void main(void)                             
 {
-    SYSTEM_Initialize();                    // prepares the ports, interrupt system, relay, and display
-    Reset_To_Start();                       // clears any old values and makes sure the program begins from the first expected input
-    SYS_LED_On();                           // turns on the status LED so the user knows the system is running
+    SYSTEM_Initialize();         
+    Reset_To_Start();                       
+    SYS_LED_On();                          
 
     while (1)                               // the main loop keeps the system running forever
     {
@@ -122,7 +133,7 @@ void SYSTEM_Initialize(void)                // prepares the whole system before 
     GPIO_Initialize();                      // sets up pin directions and ensures the used pins behave digitally
     Emergency_Initialize();                 // enables the emergency switch interrupt system
 
-    RELAY_Off();        // starts with relay OFF so the buzzer does not activate immediately at power-up
+    RELAY_Off();        // starts with relay OFF so the motor does not activate immediately at power-up
     BUZZER_Off();
     SEG_Clear();                            // clears the 7-segment so no random digit appears at startup
 }
@@ -186,12 +197,12 @@ void RELAY_Off(void)                        // deactivates the relay module
 
 void BUZZER_On(void)                         // activates the relay module
 {
-    BUZZER_LAT = 1;                          // because the module is active-low, writing 0 energizes the relay input
+    BUZZER_LAT = 1;                          // active-high buzzer on
 }
 
 void BUZZER_Off(void)                        // deactivates the relay module
 {
-    BUZZER_LAT = 0;                          // for active-low hardware, writing 1 returns the relay to its inactive state
+    BUZZER_LAT = 0;                          // active-high buzzer off
 }
 
 void Seg7_Display(uint8_t digit)            // sends one decimal digit to the 7-segment display
@@ -208,7 +219,6 @@ void Seg7_Display(uint8_t digit)            // sends one decimal digit to the 7-
 
 void SEG_Clear(void)                        // blanks the 7-segment display
 {
-
     SEG_PORT_LAT = 0x00;                    // with common cathode, writing zeros turns all segments off
 }
 
@@ -216,14 +226,15 @@ void SEG_Clear(void)                        // blanks the 7-segment display
    INPUT FUNCTIONS
    ========================= */
 
-bool PR1_IsActive(void)                     // checks whether PR1 should currently be considered "triggered"
+// Check if PR is active (active-low)
+bool PR1_IsActive(void)                  
 {
-    return (PR1_PORT == 0);                 // returns true when PR1 reads LOW because the sensor circuit was defined as active-low
+    return (PR1_PORT == 0);                 
 }
 
-bool PR2_IsActive(void)                     // checks whether PR2 should currently be considered "triggered"
+bool PR2_IsActive(void)                     
 {
-    return (PR2_PORT == 0);                 // returns true when PR2 reads LOW because the same input logic is used for both sensors
+    return (PR2_PORT == 0);            
 }
 
 /* =========================
@@ -250,7 +261,7 @@ void Reset_To_Start(void)                   // returns the whole system to its n
     Reset_InputData();                      // first clears all counters and helper values from the previous cycle
     SystemState = waitFor_PR1;              // then puts the state machine back to waiting for the first sensor input
     SEG_Clear();                            // clears the display so no old digit remains visible to the user
-    RELAY_Off();                            // makes sure the buzzer output is off before a new attempt begins
+    RELAY_Off();                            // makes sure the motor output is off before a new attempt begins
 }
 
 /* =========================
@@ -380,7 +391,7 @@ void Process_System(void)                   // controls the overall behavior by 
 
         case Wrong_Secret_Code:                   // state reached when the entered code is wrong
         {
-            Handle_WrongCode();                   // performs the failure behavior, which is the buzzer through the relay
+            Handle_WrongCode();                   // performs the failure behavior, which is the buzzer
             Reset_To_Start();                     // resets all values after the warning sound finishes
             break;                                // end of failure state
         }
@@ -405,18 +416,18 @@ void Process_System(void)                   // controls the overall behavior by 
 
 void Handle_CorrectCode(void)                // runs when the correct code is entered
 {
-    RELAY_On();                              // turns on the relay so the buzzer receives power
-    DelayMs_Blocking(WRONG_CODE_ON_MS);      // keeps the buzzer active long enough for the user to clearly hear the warning
-    RELAY_Off();                             // turns the buzzer back off after the warning duration ends
+    RELAY_On();                              // turns on the relay so the motor receives power
+    DelayMs_Blocking(CORRECT_CODE_ON_MS);      // keeps the motor active long enough for the user to clearly hear the warning
+    RELAY_Off();                             // turns the motor back off
 
     SEG_Clear();                             // clears the display so the next attempt starts without leftover numbers
 }
 
 void Handle_WrongCode(void)                  // runs when the entered code is incorrect
 {
-    BUZZER_On();                              // turns on the relay so the buzzer receives power
+    BUZZER_On();                              // turns on buzzer
     DelayMs_Blocking(WRONG_CODE_ON_MS);      // keeps the buzzer active long enough for the user to clearly hear the warning
-    BUZZER_Off();                             // turns the buzzer back off after the warning duration ends
+    BUZZER_Off();                             // turns the buzzer back off
 
     SEG_Clear();                             // clears the display so the next attempt starts without leftover numbers
 }
