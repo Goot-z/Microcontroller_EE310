@@ -1,9 +1,18 @@
+/*
+ * File:   DIY_ADC.c
+ * Author: Steve Gutierrez
+ * IDE version: MPLAB X v6.30
+ *
+ * Version:
+ * 1.0 Created program
+ * 1.1 Edited for Y Z input
+ */
+
 #include <xc.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-// CONFIG bits same as before
 #pragma config FEXTOSC = XT
 #pragma config RSTOSC = EXTOSC
 #pragma config CLKOUTEN = OFF
@@ -39,7 +48,7 @@
 
 #define _XTAL_FREQ 4000000UL
 
-// reset pins 
+// Reset pins
 #define RESET_BUTTON PORTDbits.RD3
 #define LED LATDbits.LATD2
 
@@ -48,16 +57,16 @@
 #define EN LATDbits.LATD1
 #define LCD_DATA LATB
 
-// I2C pins
-#define SCL_LAT LATCbits.LATC3
-#define SDA_LAT LATCbits.LATC4
-#define SCL_TRIS TRISCbits.TRISC3
-#define SDA_TRIS TRISCbits.TRISC4
-#define SDA_PORT PORTCbits.RC4
+// ADC channels
+#define ADC_X_CHANNEL 0x00   // RA0 / AN0
+#define ADC_Y_CHANNEL 0x01   // RA1 / AN1
+#define ADC_Z_CHANNEL 0x02   // RA2 / AN2
 
-#define MPU_ADDR 0x68
-
-/* FUNCTION PROTOTYPES*/
+// ADXL335 constants
+#define ADC_MAX       4095L
+#define VREF_MV       3300L
+#define ADXL_MV_PER_G 300L
+#define GRAVITY_10000 98067L
 
 void Button_Interrupt_Init(void);
 
@@ -68,45 +77,48 @@ void LCD_String(const char *msg);
 void LCD_String_xy(unsigned char row, unsigned char pos, const char *msg);
 void LCD_Clear(void);
 
-void I2C_Init(void);
-void I2C_Start(void);
-void I2C_Stop(void);
-unsigned char I2C_Write(unsigned char data);
-unsigned char I2C_Read(unsigned char ack);
-
-void MPU6050_Init(void);
-void MPU6050_Write(unsigned char reg, unsigned char data);
-int16_t MPU6050_Read16(unsigned char reg);
+void ADC_Init(void);
+uint16_t ADC_Read(uint8_t channel);
 
 void format_accel(char *buffer, int32_t value);
+int32_t Convert_ADC_To_Accel(uint16_t adc_value, uint16_t zero_value);
 
-/*Program starts here*/
+uint16_t zeroX = 0;
+uint16_t zeroY = 0;
+uint16_t zeroZ = 0;
 
 void main(void)
 {
     char line1[21];
     char line2[21];
 
-    int16_t rawX;
+    uint16_t rawX;
     int32_t accelX;
     int32_t lastAccelX = 0;
     int32_t delta;
 
-    
-    
     LCD_Init();
     Button_Interrupt_Init();
-    I2C_Init();
-    MPU6050_Init();
+    ADC_Init();
+
+    LCD_Clear();
+    LCD_String_xy(1, 0, "Keep sensor flat ");
+    LCD_String_xy(2, 0, "Calibrating...   ");
+    __delay_ms(2000);
+
+    zeroX = ADC_Read(ADC_X_CHANNEL);
+    zeroY = ADC_Read(ADC_Y_CHANNEL);
+    zeroZ = ADC_Read(ADC_Z_CHANNEL);
+
+    LCD_Clear();
+    LCD_String_xy(1, 0, "ADXL335 Ready   ");
+    __delay_ms(1000);
 
     while(1)
     {
-        rawX = MPU6050_Read16(0x3B);
+        rawX = ADC_Read(ADC_X_CHANNEL);
 
-        // Convert raw accelerometer data to m/s^2
-        // MPU6050 default range is +/-2g
-        // sensitivity = 16384 LSB/g
-        accelX = ((int32_t)rawX * 98067L) / 16384L;
+        accelX = Convert_ADC_To_Accel(rawX, zeroX);
 
         delta = accelX - lastAccelX;
         if(delta < 0)
@@ -114,19 +126,19 @@ void main(void)
 
         if(delta > 35000)
         {
-            sprintf(line1, "angle: Shake      ");
+            sprintf(line1, "angle: Shake     ");
         }
         else if(accelX > 20000)
         {
-            sprintf(line1, "angle: Tilt_Right ");
+            sprintf(line1, "angle: Tilt_Right");
         }
         else if(accelX < -20000)
         {
-            sprintf(line1, "angle: Tilt_Left  ");
+            sprintf(line1, "angle: Tilt_Left ");
         }
         else
         {
-            sprintf(line1, "angle: Flat       ");
+            sprintf(line1, "angle: Flat      ");
         }
 
         format_accel(line2, accelX);
@@ -141,20 +153,18 @@ void main(void)
     }
 }
 
-/* Interrupt w reset button*/
+/*************** INTERRUPT ***************/
 
 void __interrupt(irq(INT0), base(8)) INT0_ISR(void)
 {
     PIR1bits.INT0IF = 0;
 
-    __delay_ms(20);   // debounce
-    
-    
-    if(PORTDbits.RD3 == 0)
+    __delay_ms(20);
+
+    if(RESET_BUTTON == 0)
     {
-        LCD_Clear(); // clear 
-        
-        // Blink LED for ~10 seconds
+        LCD_Clear();
+
         for(int i = 0; i < 10; i++)
         {
             LED = 1;
@@ -164,37 +174,93 @@ void __interrupt(irq(INT0), base(8)) INT0_ISR(void)
             __delay_ms(500);
         }
 
-        RESET();   // reset after blinking
+        RESET();
     }
 }
 
 void Button_Interrupt_Init(void)
 {
-    ANSELDbits.ANSELD3 = 0;   // RD3 digital input
+    ANSELDbits.ANSELD3 = 0;
     TRISDbits.TRISD3 = 1;
-    
-    ANSELDbits.ANSELD2 = 0;   // digital
-    TRISDbits.TRISD2 = 0;     // output
-    LED = 0;                  // start OFF
-    INT0PPS = 0x1B;           // Map RD3 to INT0
 
-    INTCON0bits.INT0EDG = 0;  // Falling edge: button pulls RD3 LOW
+    ANSELDbits.ANSELD2 = 0;
+    TRISDbits.TRISD2 = 0;
+    LED = 0;
 
-    PIR1bits.INT0IF = 0;      // Clear INT0 flag
-    PIE1bits.INT0IE = 1;      // Enable INT0 interrupt
+    INT0PPS = 0x1B;
 
-    INTCON0bits.GIE = 1;      // Enable global interrupts
+    INTCON0bits.INT0EDG = 0;
+
+    PIR1bits.INT0IF = 0;
+    PIE1bits.INT0IE = 1;
+
+    INTCON0bits.GIE = 1;
 }
 
-/*LCD and accelerometer functions*/
+/*************** ADC FUNCTIONS ***************/
+
+void ADC_Init(void)
+{
+    // RA0, RA1, RA2 as analog inputs
+    TRISAbits.TRISA0 = 1;
+    TRISAbits.TRISA1 = 1;
+    TRISAbits.TRISA2 = 1;
+
+    ANSELAbits.ANSELA0 = 1;
+    ANSELAbits.ANSELA1 = 1;
+    ANSELAbits.ANSELA2 = 1;
+
+    // ADC reference: VDD and VSS
+    ADREF = 0x00;
+
+    // ADC clock
+    ADCLK = 0x3F;
+
+    // Acquisition time
+    ADACQ = 0x20;
+
+    // Right justified result, ADC enabled
+    ADCON0bits.FM = 1;
+    ADCON0bits.ON = 1;
+}
+
+uint16_t ADC_Read(uint8_t channel)
+{
+    ADPCH = channel;
+
+    __delay_us(20);
+
+    ADCON0bits.GO = 1;
+
+    while(ADCON0bits.GO)
+    {
+        ;
+    }
+
+    return ADRES;
+}
+
+int32_t Convert_ADC_To_Accel(uint16_t adc_value, uint16_t zero_value)
+{
+    int32_t adc_delta;
+    int32_t mv_delta;
+    int32_t accel;
+
+    adc_delta = (int32_t)adc_value - (int32_t)zero_value;
+
+    mv_delta = (adc_delta * VREF_MV) / ADC_MAX;
+
+    accel = (mv_delta * GRAVITY_10000) / ADXL_MV_PER_G;
+
+    return accel;
+}
+
+/*************** DISPLAY FORMAT ***************/
 
 void format_accel(char *buffer, int32_t value)
 {
     int32_t whole;
     int32_t decimal;
-
-    // value is scaled by 10000
-    // example: 2434 means 0.2434 m/s^2
 
     if(value < 0)
     {
@@ -211,7 +277,7 @@ void format_accel(char *buffer, int32_t value)
     }
 }
 
-/**************** LCD FUNCTIONS ****************/
+/*************** LCD FUNCTIONS ***************/
 
 void LCD_Init(void)
 {
@@ -224,7 +290,7 @@ void LCD_Init(void)
     LATB = 0x00;
     LATD &= 0xFC;
 
-    __delay_ms(20);
+    __delay_ms(100);
 
     LCD_Command(0x38);
     LCD_Command(0x0C);
@@ -285,156 +351,4 @@ void LCD_Clear(void)
 {
     LCD_Command(0x01);
     __delay_ms(2);
-}
-
-/**************** SOFTWARE I2C FUNCTIONS ****************/
-
-void I2C_Init(void)
-{
-    ANSELCbits.ANSELC3 = 0;
-    ANSELCbits.ANSELC4 = 0;
-
-    SCL_LAT = 0;
-    SDA_LAT = 0;
-
-    // Release both lines high through pull-up resistors
-    SCL_TRIS = 1;
-    SDA_TRIS = 1;
-}
-
-void I2C_Delay(void)
-{
-    __delay_us(5);
-}
-
-void I2C_Start(void)
-{
-    SDA_TRIS = 1;
-    SCL_TRIS = 1;
-    I2C_Delay();
-
-    SDA_TRIS = 0;
-    I2C_Delay();
-
-    SCL_TRIS = 0;
-    I2C_Delay();
-}
-
-void I2C_Stop(void)
-{
-    SDA_TRIS = 0;
-    SCL_TRIS = 1;
-    I2C_Delay();
-
-    SDA_TRIS = 1;
-    I2C_Delay();
-}
-
-unsigned char I2C_Write(unsigned char data)
-{
-    unsigned char i;
-    unsigned char ack;
-
-    for(i = 0; i < 8; i++)
-    {
-        if(data & 0x80)
-            SDA_TRIS = 1;
-        else
-            SDA_TRIS = 0;
-
-        SCL_TRIS = 1;
-        I2C_Delay();
-
-        SCL_TRIS = 0;
-        I2C_Delay();
-
-        data <<= 1;
-    }
-
-    SDA_TRIS = 1;
-    SCL_TRIS = 1;
-    I2C_Delay();
-
-    ack = SDA_PORT;
-
-    SCL_TRIS = 0;
-    I2C_Delay();
-
-    return ack;
-}
-
-unsigned char I2C_Read(unsigned char ack)
-{
-    unsigned char i;
-    unsigned char data = 0;
-
-    SDA_TRIS = 1;
-
-    for(i = 0; i < 8; i++)
-    {
-        data <<= 1;
-
-        SCL_TRIS = 1;
-        I2C_Delay();
-
-        if(SDA_PORT)
-            data |= 1;
-
-        SCL_TRIS = 0;
-        I2C_Delay();
-    }
-
-    if(ack)
-        SDA_TRIS = 0;
-    else
-        SDA_TRIS = 1;
-
-    SCL_TRIS = 1;
-    I2C_Delay();
-
-    SCL_TRIS = 0;
-    SDA_TRIS = 1;
-    I2C_Delay();
-
-    return data;
-}
-
-/**************** MPU6050 FUNCTIONS ****************/
-
-void MPU6050_Init(void)
-{
-    __delay_ms(100);
-
-    MPU6050_Write(0x6B, 0x00); // Wake up MPU6050
-    MPU6050_Write(0x1C, 0x00); // Accelerometer +/-2g
-    MPU6050_Write(0x1B, 0x00); // Gyroscope +/-250 deg/s
-}
-
-void MPU6050_Write(unsigned char reg, unsigned char data)
-{
-    I2C_Start();
-    I2C_Write((MPU_ADDR << 1) | 0);
-    I2C_Write(reg);
-    I2C_Write(data);
-    I2C_Stop();
-}
-
-int16_t MPU6050_Read16(unsigned char reg)
-{
-    unsigned char high;
-    unsigned char low;
-
-    I2C_Start();
-    I2C_Write((MPU_ADDR << 1) | 0);
-    I2C_Write(reg);
-
-    I2C_Start();
-    I2C_Write((MPU_ADDR << 1) | 1);
-
-    high = I2C_Read(1);
-    low = I2C_Read(0);
-
-    I2C_Stop();
-
-    return ((int16_t)high << 8) | low;
 }
