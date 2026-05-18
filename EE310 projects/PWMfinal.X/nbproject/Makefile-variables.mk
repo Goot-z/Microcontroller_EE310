@@ -6,5 +6,5 @@
 CND_BASEDIR=`pwd`
 # default configuration
 CND_ARTIFACT_DIR_default=dist/default/production
-CND_ARTIFACT_NAME_default=PWMlab.X.production.hex
-CND_ARTIFACT_PATH_default=dist/default/production/PWMlab.X.production.hex
+CND_ARTIFACT_NAME_default=PWMfinal.X.production.hex
+CND_ARTIFACT_PATH_default=dist/default/production/PWMfinal.X.production.hex
